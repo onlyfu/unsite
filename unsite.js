@@ -279,7 +279,7 @@ var Server = {
         if (posts) {
             posts.forEach(function(post) {
                 var content = Fs.readFileSync(postPath + post, 'utf8');
-                var match = /\-\-\-\r\n([\s\S]*)\r\n\-\-\-/.exec(content);
+                var match = /\-\-\-\r*\n([\s\S]*)\r*\n\-\-\-/.exec(content);
                 if (match) {
                     var contentHeaderObject = {};
                     var contentHeaderText = match[1];
@@ -289,7 +289,7 @@ var Server = {
                         contentHeaderObject[items[0]] = items[1].replace(" ", "");
                     }
 
-                    self.createPost(post, contentHeaderObject, content.replace(/\-\-\-\r\n([\s\S]*?)\r\n\-\-\-/, ""));
+                    self.createPost(post, contentHeaderObject, content.replace(/\-\-\-\r*\n([\s\S]*?)\r*\n\-\-\-/, ""));
                 }
             });
         }
