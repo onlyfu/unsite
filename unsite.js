@@ -277,9 +277,11 @@ var Server = {
         var postPath = sourcePath + "/_post/";
         var posts = Fs.readdirSync(postPath);
         if (posts) {
-            posts.forEach(function(post) {
+            posts.reverse().forEach(function(post) {
+                console.log('## building post: ' + post);
                 var content = Fs.readFileSync(postPath + post, 'utf8');
-                var match = /\-\-\-\r*\n([\s\S]*)\r*\n\-\-\-/.exec(content);
+                var rex = new RegExp(/\-\-\-\r*\n([\s\S]*)\r*\n\-\-\-/);
+                var match = rex.exec(content);
                 if (match) {
                     var contentHeaderObject = {};
                     var contentHeaderText = match[1];
@@ -289,17 +291,33 @@ var Server = {
                         contentHeaderObject[items[0]] = items[1].replace(" ", "");
                     }
 
-                    self.createPost(post, contentHeaderObject, content.replace(/\-\-\-\r*\n([\s\S]*?)\r*\n\-\-\-/, ""));
+                    self.createPost(post, contentHeaderObject,
+                        content.replace(rex, ""));
+                } else {
+                    console.log("## match post content error: " + post);
                 }
             });
+
+            // 生成列表页
+            self.buildListPage(posts);
+            // 生成首页
+        } else {
+            console.log("## no post file.");
         }
+    },
+
+    /**
+     * 构建列表页
+     * @param postLit 文章列表
+     */
+    buildListPage: function(postLit) {
+        console.log("## building list page...");
     },
 
     /**
      * 获取站点配置信息
      */
     getSiteInfo: function() {
-
         var siteInfo = this.config.site;
         for (var i in siteInfo) {
             this.parseObject['site.' + i] = siteInfo[i];
@@ -313,9 +331,7 @@ var Server = {
      * @param content
      */
     createPost: function(postName, contentHeaderObject, content) {
-
         // 更新对象
-        //this.parseObject["post.name"] = postName;
         for (var i in contentHeaderObject) {
 
             this.parseObject["post." + i] = contentHeaderObject[i];
