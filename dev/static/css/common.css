@@ -1,0 +1,17 @@
+body,html{-webkit-tap-highlight-color:transparent;}
+body{margin:0;padding:0;font-size:16px;color:#000;
+    font-family:"Microsoft YaHei","STHeiti",sans-serif}
+h1,h2,h3,h4,p,ul{margin:0;padding:0;}
+ul{list-style:none}
+a{text-decoration:none}
+button{cursor:pointer;}
+a,button,input,textarea{}
+
+.container{padding:10px 20px;}
+.header{border-bottom:1px solid #efefef;padding-bottom:10px;background-color:#000;color:#fff;}
+.logo{font-size:20px;}
+
+.post-content{padding: 20px 0;line-height:1.6;text-indent: 40px;}
+.post-content-title-big{border-bottom:1px solid #efefef;padding:10px 0;margin-bottom:10px;text-indent: 0;}
+
+.post-info{padding:10px 0;}
