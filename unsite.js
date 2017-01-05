@@ -252,6 +252,9 @@ var Server = {
         console.log('## building......');
         var sourcePath = this.config.output.base.source;
         var targetPath = this.config.output.base.target;
+
+        this.checkOutputDir(targetPath);
+
         console.log('## clearing......');
         this.delDir(targetPath);
         console.log('## loading site info...');
@@ -277,6 +280,7 @@ var Server = {
         var postPath = sourcePath + "/_post/";
         var posts = Fs.readdirSync(postPath);
         if (posts) {
+            var postList = [];
             posts.reverse().forEach(function(post) {
                 console.log('## building post: ' + post);
                 var content = Fs.readFileSync(postPath + post, 'utf8');
@@ -291,6 +295,8 @@ var Server = {
                         contentHeaderObject[items[0]] = items[1].replace(" ", "");
                     }
 
+                    postList.push(contentHeaderObject);
+
                     self.createPost(post, contentHeaderObject,
                         content.replace(rex, ""));
                 } else {
@@ -299,7 +305,7 @@ var Server = {
             });
 
             // 生成列表页
-            self.buildListPage(posts);
+            self.buildListPage(postList);
             // 生成首页
         } else {
             console.log("## no post file.");
@@ -307,11 +313,24 @@ var Server = {
     },
 
     /**
-     * 构建列表页
-     * @param postLit 文章列表
+     * 检查输出目录
+     * @param targetPath 目录路径
      */
-    buildListPage: function(postLit) {
+    checkOutputDir: function(targetPath) {
+
+        if (!Fs.existsSync(targetPath)) {
+            Fs.mkdirSync(targetPath);
+        }
+    },
+
+    /**
+     * 构建列表页
+     * @param postList 文章列表
+     */
+    buildListPage: function(postList) {
         console.log("## building list page...");
+        var listLen = postList.length;
+        var pageSize = this.config.pageSize;
     },
 
     /**
