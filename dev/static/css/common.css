@@ -13,5 +13,6 @@ a,button,input,textarea{}
 
 .post-content{padding: 20px 0;line-height:1.6;text-indent: 40px;}
 .post-content-title-big{border-bottom:1px solid #efefef;padding:10px 0;margin-bottom:10px;text-indent: 0;}
+.post-content-title-middle{padding:10px 0;}
 
 .post-info{padding:10px 0;}

@@ -2,7 +2,7 @@
 
 var Config = {
     'site': {
-        'title': '唯一的我',
+        'title': 'Wemart Hack Day - 纯静态建站服务',
         'description': ''
     },
     'list': {

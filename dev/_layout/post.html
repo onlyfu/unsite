@@ -3,8 +3,8 @@
 <head>
     <meta http-equiv="content-type" content="text/html; charset=utf-8" />
     <title>{{ post.title }} - {{ site.title }}</title>
-    <meta name="keyword" content="">
-    <meta name="description" content="">
+    <meta name="keyword" content="{{ post.keyword }}">
+    <meta name="description" content="{{ post.introduction }}">
     <meta content="yes" name="apple-mobile-web-app-capable"/>
     <meta content="telephone=no,email=no" name="format-detection"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
@@ -17,7 +17,10 @@
     </div>
 </div>
 <div class="container">
-    <div class="post-content">{{ post.content }}</div>
+    <h2 class="post-content-title-big">{{ post.title }}</h2>
+    <div class="post-content">
+        {{ post.content }}
+    </div>
     <div class="post-info">
         分类：{{ post.category }} 作者：{{ post.author }} 时间：{{ post.date }}
     </div>
