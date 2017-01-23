@@ -11,7 +11,7 @@ var Config = {
     'list': {
         'tempFile': 'template/list.html',
         'pageFile': 'template/page.html',
-        'pageSize': 10,
+        'pageSize': 3,
         'dir': 'list'
     },
     'output': {
