@@ -11,4 +11,4 @@ var Server = require('./unsite');
 // Config
 var Config = require('./config');
 
-Server.run(Config, null);
+Server.run(Config);

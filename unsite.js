@@ -2,19 +2,15 @@
  * WmJs
  *
  * author: onlyfu
- * update: 2015-08-24
+ * update: 2017-01-01
  */
 
-var Http = require('http');
-var Url = require('url');
 var Os = require('os');
 var Fs = require('fs');
 var Path = require('path');
 //var uglify = require('uglify-js');
 //var jsp = require('uglify-js').parser;
 //var pro = require('uglify-js').uglify;
-
-var Config = require('./config');
 
 var Server = {
 
@@ -37,7 +33,7 @@ var Server = {
     /**
      * 运行
      */
-    run: function(paraConfig, route){
+    run: function(paraConfig){
 
         var argv = process.argv;
         var argvLen = argv.length;
