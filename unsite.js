@@ -429,6 +429,8 @@ var Server = {
         for (var i in siteInfo) {
             this.parseObject['site.' + i] = siteInfo[i];
         }
+
+        this.parseObject['site.version'] = Math.floor(Math.random() * 100000 + 10000);
     },
 
     /**

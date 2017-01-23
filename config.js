@@ -1,6 +1,8 @@
-// 配置
-
+/**
+ * 配置
+ */
 var Config = {
+    'version': '1.0.0',
     'site': {
         'title': '唯一的日志',
         'description': '兴趣决定高度，认真你就赢了',
@@ -12,7 +14,6 @@ var Config = {
         'pageSize': 10,
         'dir': 'list'
     },
-    'version': '2.0.0',
     'output': {
         'base': {
             'source': 'dev',
