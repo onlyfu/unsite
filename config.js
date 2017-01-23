@@ -2,11 +2,15 @@
 
 var Config = {
     'site': {
-        'title': 'Wemart Hack Day - 纯静态建站服务',
-        'description': ''
+        'title': '唯一的日志',
+        'description': '兴趣决定高度，认真你就赢了',
+        'host': 'http://localhost/unsite/dist/'
     },
     'list': {
-        'pageSize': 10
+        'tempFile': 'template/list.html',
+        'pageFile': 'template/page.html',
+        'pageSize': 10,
+        'dir': 'list'
     },
     'version': '2.0.0',
     'output': {
@@ -18,6 +22,6 @@ var Config = {
         'lib': 'lib',
         'view': 'view'
     }
-}
+};
 
 module.exports = Config;

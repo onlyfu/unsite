@@ -20,6 +20,8 @@ var Server = {
 
     // layout对象
     layoutObject: {},
+    // 文章列表
+    postList: [],
     // 解析变量对象
     parseObject: {},
     // 构建输出html的运行状态
@@ -294,6 +296,7 @@ var Server = {
                         var items =  contentHeaderList[i].replace("\r", "").split(":");
                         contentHeaderObject[items[0]] = items[1].replace(" ", "");
                     }
+                    contentHeaderObject['url'] = 'post/' + post;
 
                     postList.push(contentHeaderObject);
 
@@ -329,8 +332,97 @@ var Server = {
      */
     buildListPage: function(postList) {
         console.log("## building list page...");
+        var self = this;
+        // 获取配置参数
         var listLen = postList.length;
-        var pageSize = this.config.pageSize;
+        var pageSize = this.config.list.pageSize;
+        var pageNum = Math.ceil(listLen / pageSize);
+
+        // 加载模板
+        var templateFile = this.config.output.base.source + '/' + this.config.list.tempFile;
+        var template = Fs.readFileSync(templateFile, 'utf8');
+        if (!template) {
+            console.log('## loading template file failed. ' + templateFile);
+            return false;
+        }
+        // 解析模板生成方法
+        eval(this.createScript('createHtml', template));
+
+        // 加载page
+        var pageFile = this.config.output.base.source + '/' + this.config.list.pageFile;
+        var page = Fs.readFileSync(pageFile, 'utf8');
+        eval(this.createScript('createPage', page));
+
+        var getAndBuildNum = 1;
+        var getAndBuildList = function() {
+
+            if (postList.length > 0) {
+                var thisPage = postList.splice(0, self.config.list.pageSize);
+                self.parseObject['list.list'] = createHtml(thisPage);
+
+                var target = self.config.output.base.target + "/";
+                var targetFilename = "index.html";
+                var indexHtml = "";
+
+                // 构建分页
+                var prePage = getAndBuildNum > 1 ?
+                    (getAndBuildNum == 2 ? self.config.site.host :
+                        self.config.site.host + 'list/page-' + (getAndBuildNum - 1) + '.html') : "";
+                var nextPage = getAndBuildNum < pageNum ?
+                    self.config.site.host + 'list/page-' + (getAndBuildNum + 1) + '.html' : "";
+                self.parseObject['list.page'] = createPage({
+                    'prePage': prePage,
+                    'nextPage': nextPage
+                });
+
+                if (getAndBuildNum == 1) {
+                    // 解析layout
+                    indexHtml = self.parseTemplate(self.layoutObject['index'], self.parseObject);
+                } else {
+                    indexHtml = self.parseTemplate(self.layoutObject['index'], self.parseObject);
+                    target = self.config.output.base.target + "/" + self.config.list.dir + "/";
+                    targetFilename = 'page-' + getAndBuildNum + '.html';
+                }
+
+                // 写文件
+                if (!Fs.existsSync(target)) {
+                    Fs.mkdirSync(target);
+                }
+                Fs.writeFileSync(target + targetFilename, indexHtml, 'utf8');
+
+                getAndBuildNum++;
+                // 创建page
+                if (postList.length > 0) {
+                    getAndBuildList();
+                }
+            }
+        };
+        getAndBuildList();
+    },
+
+    /**
+     * 创建模板script
+     * @param funcName
+     * @param template
+     * @returns {string}
+     */
+    createScript: function(funcName, template) {
+
+        // 解析模板生成方法
+        var templateLines = template.split('\n');
+        var templateResult = ['var html = "";'];
+        for (var i in templateLines) {
+            var line = this.templateParse(templateLines[i]);
+            if (line) {
+                templateResult.push(line);
+            }
+        }
+        var tempScriptTxt = ['var '+ funcName +' = function(data) {'];
+        tempScriptTxt.push(templateResult.join(""));
+        tempScriptTxt.push('return html');
+        tempScriptTxt.push('}');
+
+        return tempScriptTxt.join("");
     },
 
     /**
@@ -360,7 +452,7 @@ var Server = {
         // 获取layout对象
         var layout = this.layoutObject[contentHeaderObject.layout];
         // 解析模板
-        var html = this.parseTemplate(layout);
+        var html = this.parseTemplate(layout, this.parseObject);
         // 写文件
         var target =this.config.output.base.target + "/post/";
         if (!Fs.existsSync(target)) {
@@ -373,11 +465,11 @@ var Server = {
      * 解析模板
      * @param content 要解析的内容
      */
-    parseTemplate: function(content) {
+    parseTemplate: function(content, data) {
         var result = content;
-        for (var i in this.parseObject) {
+        for (var i in data) {
             var parseString = new RegExp("{{ " + i + " }}", 'g');
-            result = result.replace(parseString, this.parseObject[i]);
+            result = result.replace(parseString, data[i]);
         }
 
         return result;
@@ -447,6 +539,112 @@ var Server = {
 
         Fs.writeFileSync(targetDir + '/index.html', indexTemplate, 'utf8');
     },
+
+    /**
+     * 解析模板
+     * @param line 行代码
+     */
+    templateParse: function(line) {
+
+        if (!line || line == '') {
+            return null;
+        }
+
+        var result = line.trim().replace(new RegExp(/'/g), "\\'");
+        var parseStatus = false;
+
+        /**
+         * 解析变量
+         */
+        var parseData = function() {
+
+            var item;
+            // 检查变量
+            var patt = /\{\{ (.+?) \}\}/i;
+            while (item = patt.exec(result)) {
+
+                result = result.replace(item[0], "'+" + item[1].replace(new RegExp(/\\/g), "") + "+'");
+            }
+        };
+
+        /**
+         * 解析定义
+         */
+        var parseVer = function() {
+            var item;
+            // 检查变量
+            var patt = /\{\{ var (.+?) \}\}/i;
+            while (item = patt.exec(result)) {
+                parseStatus = true;
+                result = result.replace(item[0], "var " + item[1].replace(new RegExp(/\\/g), "") + ";");
+            }
+        };
+
+        /**
+         * 解析条件
+         */
+        var parseCondition = function() {
+
+            var item;
+            var patt = /\{\{ if (.+?) \}\}/i;
+            while (item = patt.exec(result)) {
+                parseStatus = true;
+                result = result.replace(item[0], "if("+ item[1].replace(new RegExp(/\\/g), "") +"){");
+            }
+
+            patt = /\{\{ else if (.+?) \}\}/i;
+            while (item = patt.exec(result)) {
+                parseStatus = true;
+                result = result.replace(item[0], "} else if("+ item[1].replace(new RegExp(/\\/g), "") +"){");
+            }
+
+            patt = /\{\{ else \}\}/i;
+            while (item = patt.exec(result)) {
+                parseStatus = true;
+                result = result.replace(item[0], "} else {");
+            }
+        };
+
+        /**
+         * 解析循环
+         */
+        var parseLoop = function() {
+
+            var item;
+            var patt = /\{\{ for (.+?) \}\}/i;
+            while (item = patt.exec(result)) {
+
+                parseStatus = true;
+                result = result.replace(item[0], "for("+ item[1].replace(new RegExp(/\\/g), "") +"){");
+            }
+        };
+
+        /**
+         * 解析结束
+         */
+        var parseEnd = function() {
+
+            var item;
+            var patt = /\{\{ end \}\}/i;
+            while (item = patt.exec(result)) {
+
+                parseStatus = true;
+                result = result.replace(item[0], "}");
+            }
+        };
+
+        parseLoop();
+        parseCondition();
+        parseEnd();
+        parseVer();
+        parseData();
+
+        if (!parseStatus) {
+            result = "html += '" + result + "';";
+        }
+
+        return result;
+    }
 };
 
 module.exports = Server;
