@@ -46,7 +46,7 @@ var Server = {
         var port = 3000;
         var buildType = false;
         var miniFile = false;
-        var apiHost = '';
+        var host = '';
 
         for (var i = 0; i < argvLen; i++) {
 
@@ -58,7 +58,7 @@ var Server = {
                     buildType = true;
                     break;
                 case '-h':
-                    apiHost = argv[i + 1];
+                    host = argv[i + 1];
                     break;
                 case '-m':
                     miniFile = true;
@@ -71,7 +71,7 @@ var Server = {
         this.config = paraConfig;
 
         if (buildType) {
-            this.build(miniFile);
+            this.build(miniFile, host);
         }
     },
 
@@ -243,7 +243,7 @@ var Server = {
     /**
      * 构建输出html
      */
-    build: function(miniFile) {
+    build: function(miniFile, host) {
 
         var self = this;
 
@@ -256,7 +256,7 @@ var Server = {
         console.log('## clearing......');
         this.delDir(targetPath);
         console.log('## loading site info...');
-        this.getSiteInfo();
+        this.getSiteInfo(host);
         console.log('## copying static file...');
         var fileExt = /^(gif|png|jpg|css|html|js|svg|ttf|eot|woff|woff2)$/ig;
         this.copyDir(sourcePath + "/static", targetPath, fileExt);
@@ -424,12 +424,17 @@ var Server = {
     /**
      * 获取站点配置信息
      */
-    getSiteInfo: function() {
+    getSiteInfo: function(host) {
         var siteInfo = this.config.site;
         for (var i in siteInfo) {
             this.parseObject['site.' + i] = siteInfo[i];
         }
-
+        if (host) {
+            var parseString = /:\\/g;
+            host = host.replace(parseString, '://');
+            parseString = /\\/g;
+            this.parseObject['site.host'] = host.replace(parseString, '/');
+        }
         this.parseObject['site.version'] = Math.floor(Math.random() * 100000 + 10000);
     },
 

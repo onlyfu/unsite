@@ -6,7 +6,7 @@ var Config = {
     'site': {
         'title': '唯一的日志',
         'description': '兴趣决定高度，认真你就赢了',
-        'host': 'http://localhost/unsite/dist/'
+        'host': 'http://unsite.unjs.me/'
     },
     'list': {
         'tempFile': 'template/list.html',
