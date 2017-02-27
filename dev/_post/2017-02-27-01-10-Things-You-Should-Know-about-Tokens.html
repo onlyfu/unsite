@@ -1,0 +1,334 @@
+---
+layout: post
+title: 10 Things You Should Know about Tokens
+introduction:
+keyword: tokens,javascript
+author: fuwy
+category: javascript
+date: 2017-02-27
+---
+<p>
+    原文地址：
+    <a href="http://www.feweekly.com/trackers/open/0e295247d7c74f01d3b982d51c97f9ff">
+        点击查看
+    </a>
+</p>
+<ul>
+    <li>1. Tokens need to be stored somewhere (local/session storage or cookies)</li>
+    <li>2. Tokens can expire like cookies, but you have more control</li>
+    <li>3. Local/session storage won't work across domains, use a marker cookie</li>
+    <li>4. Preflight requests will be sent on each CORS request</li>
+    <li>5. When you need to stream something, use the token to get a signed request</li>
+    <li>6. It's easier to deal with XSS than XSRF</li>
+    <li>7. The token gets sent on every request, watch out its size</li>
+    <li>8. If you store confidential info, encrypt the token</li>
+    <li>9. JSON Web Tokens can be used in OAuth</li>
+    <li>10. Tokens are not silver bullets, think about your authorization use cases carefully</li>
+</ul>
+<h3>
+    1. Tokens need to be stored somewhere (local/session storage or cookies)
+</h3>
+<p>
+    In the context of tokens being used on single page applications, some people have brought up the issue about
+    refreshing the browser, and what happens with the token. The answer is simple: you have to store the token
+    somewhere: in session storage, local storage or a client side cookie. Most session storage polyfills fallback to
+    cookies when the browser doesn't support it.
+</p>
+<p>
+    If you are wondering "but if I store the token in the cookie I'm back to square one". Not really, in this case you
+    are using cookies as a storage mechanism, not as an authentication mechanism (i.e. the cookie won't be used by
+    the web framework to authenticate a user, hence no XSRF attack)
+</p>
+<h3>
+    2. Tokens can expire like cookies, but you have more control
+</h3>
+<p>
+    Tokens have an expiration (in JSON Web Tokens is represented by exp property), otherwise someone could
+    authenticate forever to the API once they logged in at least once. Cookies also have expiration for the same reasons.
+</p>
+<p>
+    In the world of cookies, there are different options to control the lifetime of the cookie:
+</p>
+<ul>
+    <li>1. Cookies can be destroyed after the browser is closed (session cookies).</li>
+    <li>2. In addition to this you can implement a server side check (typically done for you by the web framework in use),
+        and you could implement expiration or sliding window expiration.</li>
+    <li>3. Cookies can be persistent (not destroyed after the browser is closed) with an expiration.</li>
+</ul>
+<p>
+    In the tokens world, once the token expires, you simply want to get a new one. You could implement an endpoint to
+    refresh a token that will:
+</p>
+<ul>
+    <li>1. Validate the old token</li>
+    <li>2. Check if the user still exists or access hasn't been revoked or whatever makes sense for your application</li>
+    <li>3. Issue a new token with a renewed expiration</li>
+</ul>
+<p>
+    You can even store in the token the original issue date, and enforce a re-login after two weeks or so.
+</p>
+<pre>
+app.post('/refresh_token', function (req, res) {
+    // verify the existing token
+    var profile = jwt.verify(req.body.token, secret);
+
+    // if more than 14 days old, force login
+    if (profile.original_iat - new Date() > 14) { // iat == issued at
+        return res.send(401); // re-logging
+    }
+
+    // check if the user still exists or if authorization hasn't been revoked
+    if (!valid) return res.send(401); // re-logging
+
+    // issue a new token
+    var refreshed_token = jwt.sign(profile, secret, { expiresInMinutes: 60*5 });
+    res.json({ token: refreshed_token });
+});
+</pre>
+<p>
+    If you need revocation of tokens (useful if tokens are long-lived) you will need to have some sort of registry
+    of issued tokens to check against.
+</p>
+<h3>
+    3. Local/session storage won't work across domains, use a marker cookie
+</h3>
+<p>
+    If you set a cookie's domain to .yourdomain.com it can be accessed from yourdomain.com and app.yourdomain.com,
+    making it easier to detect from the main domain (where you probably have, let's say, your marketing site)
+    that the user is already logged in and redirect her to app.yourdomain.com.
+</p>
+<p>
+    Tokens stored in local/session storage, on the other hand, can't be accessed from different domains
+    (even if these are subdomains). So what can you do?
+</p>
+<p>
+    One possible option is, when the user authenticates on app.yourdomain.com and you generate a token you can
+    also set a cookie set to .yourdomain.com
+</p>
+<pre>
+$.post('/authenticate', function() {
+    // store token on local/session storage or cookie
+    ....
+
+    // create a cookie signaling that user is logged in
+    $.cookie('loggedin', profile.name, '.yourdomain.com');
+});
+</pre>
+<p>
+    Then, in youromdain.com you can check the existance of that cookie and redirect to app.yourdomain.com if the
+    cookie exists. The token will be available on app subdomain, and from there on, the usual flow applies
+    (if the token is still valid use it, if not get a new one unless last login was more than the threshold you set up).
+</p>
+<p>
+    It could happen that the cookie exists but the token was deleted or something else happened.
+    In that case, the user would have to login again. But what's important to highlight here is, as we said before,
+    we are not using the cookie as an authentication mechanism, just as a storage mechanism that happens to support
+    storing information across different domains.
+</p>
+<h3>
+    4. Preflight requests will be sent on each CORS request
+</h3>
+<p>
+    Someone pointed out that the Authorization header is not a simple header, hence a pre-flight request would be
+    required for all the requests to a particular URLs.
+</p>
+<pre>
+OPTIONS https://api.foo.com/bar
+GET https://api.foo.com/bar
+    Authorization: Bearer ....
+
+OPTIONS https://api.foo.com/bar2
+GET https://api.foo.com/bar2
+    Authorization: Bearer ....
+
+GET https://api.foo.com/bar
+    Authorization: Bearer ....
+</pre>
+<p>
+    But this happens if you are sending Content-Type: application/json for instance.
+    So this is already happening for most applications.
+</p>
+<p>
+    One small caveat, the OPTIONS request won't have the Authorization header itself, so your web framework should
+    support treating OPTIONS and the subsequent requests differently
+    (Note: Microsoft IIS for some reason seems to have issues with this).
+</p>
+<h3>
+    5. When you need to stream something, use the token to get a signed request
+</h3>
+<p>
+    When using cookies, you can trigger a file download and stream the contents easily. However, in the tokens world,
+    where the request is done via XHR, you can't rely on that. The way you solve this is by generating a signed
+    request like AWS does, for example. Hawk Bewits is a nice framework to enable this:
+</p>
+<p>
+    Request:
+</p>
+<pre>
+POST /download-file/123
+Authorization: Bearer...
+</pre>
+<p>
+    Response:
+</p>
+<pre>
+    ticket=lahdoiasdhoiwdowijaksjdoaisdjoasidja
+</pre>
+<p>
+    This ticket is stateless and it is built based on the URL: host + path + query + headers + timestamp + HMAC,
+    and has an expiration. So it can be used in the next, say 5 minutes, to download the file.
+</p>
+<p>
+    You would then redirect to /download-file/123?ticket=lahdoiasdhoiwdowijaksjdoaisdjoasidja.
+    The server will check that the ticket is valid and continue with business as usual.
+</p>
+<h3>
+    6. It's easier to deal with XSS than XSRF
+</h3>
+<p>
+    Cookies have this feature that allows setting an HttpOnly flag from server side so they can only be accessed
+    on the server and not from JavaScript. This is useful because it protects the content of that cookie to
+    be accessed by injected client-side code (XSS).
+</p>
+<p>
+    Since tokens are stored in local/session storage or a client side cookie, they are open to an XSS attack
+    getting the attacker access to the token. This is a valid concern, and for that reason you should keep your
+    tokens expiration low.
+</p>
+<p>
+    But if you think about the attack surface on cookies, one of the main ones is XSRF. The reality is that XSRF
+    is one of the most misunderstood attacks, and the average developer, might not even understand the risk,
+    so lots of applications lack anti-XSRF mechanism. However, everybody understands what injection is. Put simply,
+    if you allow input on your website and then render that without escaping it, you are open to XSS. So based on
+    our experience, it is easier to protect against XSS than protecting against XSRF. Adding to that,
+    anti-XSRF is not built-in on every web framework. XSS on the other hand is easy to prevent by using the escape
+    syntax available by default on most template engines.
+</p>
+<h3>
+    7. The token gets sent on every request, watch out its size
+</h3>
+<p>
+    Every time you make an API request you have to send the token in the Authorization header.
+</p>
+<pre>
+GET /foo
+Authorization: Bearer ...2kb token...
+</pre>
+<p>
+    vs.
+</p>
+<pre>
+GET /foo
+connect.sid: ...20 bytes cookie...
+</pre>
+<p>
+    Depending on how much information you store in that token, it could get big. On the other hand,
+    session cookies usually are just an identifier (connect.sid, PHPSESSID, etc.) and the rest of the content lives
+    on the server (in memory if you just have one server or a database if you run on a server farm).
+</p>
+<p>
+    Now, nothing prevents you from implementing a similar mechanism with tokens. The token would have the basic
+    information needed and on the server side you would enrich it with more data on every API call.
+    This is exactly the same thing cookies will do, with the difference that you have the additional benefit
+    that this is now a conscious decision, you have full control, and is part of your code.
+</p>
+<pre>
+GET /foo
+Authorization: Bearer ……500 bytes token….
+</pre>
+<p>
+    Then on the server:
+</p>
+<pre>
+app.use('/api',
+    // validate token first
+    expressJwt({secret: secret}),
+
+    // enrich req.user with more data from db
+    function(req, res, next) {
+    req.user.extra_data = get_from_db();
+    next();
+});
+</pre>
+<p>
+    It is worth mentioning that you could also have the session stored completely on the cookie
+    (instead of being just an identifier). Some web platforms support that, others not. For instance,
+    in node.js you can use mozilla/node-client-sessions.
+</p>
+<h3>
+    8. If you store confidential info, encrypt the token
+</h3>
+<p>
+    The signature on the token prevents tampering with it. TLS/SSL prevents man in the middle attacks.
+    But if the payload contains sensitive information about the user (e.g. SSN, whatever),
+    you can also encrypt them. The JWT spec points to the JWE spec but most of the libraries don't implement JWE yet,
+    so the simplest thing is to just encrypt with AES-CBC as shown below.
+</p>
+<pre>
+app.post('/authenticate', function (req, res) {
+    // validate user
+
+    // encrypt profile
+    var encrypted = { token: encryptAesSha256('shhhh', JSON.stringify(profile)) };
+
+    // sing the token
+    var token = jwt.sign(encrypted, secret, { expiresInMinutes: 60*5 });
+
+    res.json({ token: token });
+}
+
+function encryptAesSha256 (password, textToEncrypt) {
+    var cipher = crypto.createCipher('aes-256-cbc', password);
+    var crypted = cipher.update(textToEncrypt, 'utf8', 'hex');
+    crypted += cipher.final('hex');
+    return crypted;
+}
+</pre>
+<p>
+    Of course you can use the approach on #7 and keep confidential info in a database.
+</p>
+<p>
+    UPDATE: Pedro Felix correctly pointed out that MAC-then-encrypt is vulnerable to Vaudenay-style attacks.
+    I updated the code to do encrypt-then-MAC.
+</p>
+<h3>
+    9. JSON Web Tokens can be used in OAuth: Bearer Token
+</h3>
+<p>
+    Tokens are usually associated with OAuth. OAuth 2 is an authorization protocol that solves identity delegation.
+    The user is prompted for consent to access his/her data and the authorization server gives back an
+    access_token that can be used to call the APIs acting as that user.
+</p>
+<p>
+    Typically these tokens are opaque. They are called bearer tokens and are random strings that will be stored
+    in some kind of hash-table storage on the server (db, cache, etc.) together with an expiration,
+    the scope requested (e.g. access to friend list) and the user who gave consent. Later, when the API is called,
+    this token is sent and the server lookup on the hash-table, rehydrating the context to make the authorization
+    decision (did it expire? does this token have the right scope associated for the API that wants to be accessed?).
+</p>
+<p>
+    The main difference between these tokens and the ones we've been discussing is that signed tokens (e.g.: JWT)
+    are "stateless". They don't need to be stored on a hash-table, hence it's a more lightweight approach.
+    OAuth2 does not dictate the format of the access_token so you could return a JWT from the authorization
+    server containing the scope/permissions and the expiration.
+</p>
+<h3>
+    10. Tokens are not silver bullets, think about your authorization use cases carefully
+</h3>
+<p>
+    Couple of years ago we helped a big company implement a token-based architecture.
+    This was a 100.000+ employees company with tons of information to protect. They wanted to have a centralized
+    organization-wide store for "authentication & authorization". Think about "user X can read field id and name of
+    clincial trial Y for hospital Z on country W" use cases. This fine-grained authorization, as you can imagine,
+    can get unmanageable pretty quickly, not only technically but also administratively.
+</p>
+<ul>
+    <li>Tokens can get really big</li>
+    <li>Your apps/APIs gets more complicated</li>
+    <li>Whoever grant these permissions will have a hard time managing all this.</li>
+</ul>
+<p>
+    We ended up working more on the information architecture side of things to make sure the right scopes and
+    permissions were created. Conclusion: resist the temptation of putting everything into tokens and do some
+    analysis and sizing before going all the way with this approach.
+</p>

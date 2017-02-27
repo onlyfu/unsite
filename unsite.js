@@ -447,10 +447,13 @@ var Server = {
     createPost: function(postName, contentHeaderObject, content) {
         // 更新对象
         for (var i in contentHeaderObject) {
-
-            this.parseObject["post." + i] = contentHeaderObject[i];
+            if (i == 'img') {
+                this.parseObject["post." + i] = this.parseObject['site.host'] + contentHeaderObject[i];
+            } else {
+                this.parseObject["post." + i] = contentHeaderObject[i];
+            }
         }
-        this.parseObject["post.content"] = content;
+        this.parseObject["post.content"] = this.parseTemplate(content, this.parseObject);
 
         // 获取layout对象
         var layout = this.layoutObject[contentHeaderObject.layout];
