@@ -292,7 +292,7 @@ var Server = {
                         var items =  contentHeaderList[i].replace("\r", "").split(":");
                         contentHeaderObject[items[0]] = items[1].replace(" ", "");
                     }
-                    contentHeaderObject['url'] = 'post/' + post;
+                    contentHeaderObject['url'] = self.config.site.host + 'post/' + post;
 
                     postList.push(contentHeaderObject);
 
@@ -362,7 +362,7 @@ var Server = {
 
                 // 构建分页
                 var prePage = getAndBuildNum > 1 ?
-                    (getAndBuildNum == 2 ? self.config.site.host :
+                    (getAndBuildNum === 2 ? self.config.site.host :
                         self.config.site.host + 'list/page-' + (getAndBuildNum - 1) + '.html') : "";
                 var nextPage = getAndBuildNum < pageNum ?
                     self.config.site.host + 'list/page-' + (getAndBuildNum + 1) + '.html' : "";
@@ -371,7 +371,7 @@ var Server = {
                     'nextPage': nextPage
                 });
 
-                if (getAndBuildNum == 1) {
+                if (getAndBuildNum === 1) {
                     // 解析layout
                     indexHtml = self.parseTemplate(self.layoutObject['index'], self.parseObject);
                 } else {
