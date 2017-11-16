@@ -1,0 +1,30 @@
+---
+layout: post
+title: Supervisor4.0和python2.7的crit问题,导致python进程阻塞
+introduction:  Supervisor4.0守护python2.7的服务时，会出现crit问题，导致python进程阻塞
+keyword: supervisor,python2.7
+author: fuwy
+category: python
+date: 2017-11-16
+---
+<h3 class="post-content-title-middle">
+    1. 问题原因
+</h3>
+<p>
+    Supervisor高版本在守护python2.7的服务时，会有报错并倒至进程阻塞的问题
+</p>
+<pre>
+    &lt;type 'exceptions.UnicodeDecodeError'&gt;:'utf8' codec can't decode byte 0xc1 in position 25
+</pre>
+<h3 class="post-content-title-middle">
+    2. 解决方法
+</h3>
+<p>
+    Supervisor使用3.3.1版本即可解决
+</p>
+<h3 class="post-content-title-middle">
+    3. 下载地址
+</h3>
+<p>
+    <a href="https://pypi.python.org/pypi/supervisor/3.3.1">supervisor-3.3.1</a>
+</p>
